@@ -1,26 +1,25 @@
-# Serveur apache
-FROM debian:latest
-MAINTAINER Arnaud POINTET <arnaud.pointet@gmail.com>
+# serve apache fast cgi
+FROM ubuntu:18.04
 
-RUN echo 'deb http://ftp.fr.debian.org/debian/ jessie non-free' >> /etc/apt/sources.list
-RUN echo 'deb-src http://ftp.fr.debian.org/debian/ jessie non-free' >> /etc/apt/sources.list
-RUN apt-get update
-RUN apt-get -y install apache2 libapache2-mod-fastcgi
+MAINTAINER Thomas Prince <me@tprince.pro>
 
-RUN rm /etc/apache2/sites-enabled/*
+LABEL org.label-schema.vendor="ecoboff1" \
+        org.label-schema.description="Custom apache fast cgi connector for alpine-php-fpm" \
+        org.label-schema.vcs-url="https://github.com/dockage/alpine-php-fpm"
+# Install apache pacakges and clean up
+RUN apt update -qy && apt upgrade -qy && apt autoremove -qy \
+  && apt-get install -qy apache2 apache2-doc apache2-utils \
+    libapache2-mod-fcgid apache2-suexec-pristine imagemagick \
+    libruby libapache2-mod-python && apt-get clean && rm -rf /var/lib/apt
 
-ENV VIRTUALHOST lab.dev
+# Enable ssl and fast cgi packages and clean up vhosts in apache
+RUN a2enmod suexec rewrite ssl actions \
+    include cgi dav_fs dav auth_digest headers proxy_fcgi alias \
+    && a2dissite 000-default && rm -f /etc/apache2/sites-available/*
+# Copy the custom apache launch bash file so it can be run as the ENTRYPOINT
+COPY ./launch-apache.sh /usr/bin/local/launch-apache.sh
+RUN chmod +x /usr/bin/local/launch-apache.sh
 
-ADD conf-available /etc/apache2/conf-available
-ADD sites-available /etc/apache2/sites-available
-#ADD mods-available /etc/apache2/mods-available
+ENTRYPOINT ["/usr/bin/local/launch-apache.sh; /usr/sbin/apache2ctl", "-D", "FOREGROUND"]
 
-EXPOSE 80
-
-ADD apache.sh /usr/bin/apache.sh
-RUN chmod +x /usr/bin/apache.sh
-ENTRYPOINT apache.sh
-
-VOLUME /var/www
-
-WORKDIR /var/www
+EXPOSE 80 443

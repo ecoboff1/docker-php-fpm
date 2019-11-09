@@ -1,19 +1,46 @@
-apache:
+version: '3.5'
+services:
+  apache:
     build: apache
-    restart: always
     volumes:
-        - ./html:/var/www
+      - ./www:/var/www
+      - ./sites-available:/etc/apache2/sites-available
     ports:
-        - 80:80
+      - 80:80
     links:
-        - php:php
-    environment:
-        - VIRTUALHOST=minty.charm.i.ng
+      - php-fpm:php-fpm
 
-php:
-    build: php-fpm
+  php-fpm:
+    image: dockage/alpine-php-fpm
     restart: always
     volumes:
-        - /var/www:/var/www
+      - ./www:/var/www
+    links :
+      - db:db
+    environment:
+      - PHP_FPM_USER=www-data
+      - PHP_FPM_GROUP=www-data
+      - PHP_FPM_PM_MAX_CHILDREN=5
+      - PHP_FPM_PM_START_SERVERS=2
+      - PHP_FPM_PM_MIN_SPARE_SERVERS=1
+      - PHP_FPM_PM_MAX_SPARE_SERVERS=3
+      - PHP_FPM_PM_MAX_REQUESTS=0
+      - MYSQL_DATABASE=db
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWOR=${DB_PASS}
+
+  db:
+    image: mysql
+    restart: always
+    volumes:
+      - mysql:/var/mysql
     ports:
-        - 9000:9000
+      - 3306:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL}
+      - MYSQL_DATABASE=db
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASS}
+
+volumes:
+  mysql:

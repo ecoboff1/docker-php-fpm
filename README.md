@@ -1,2 +1,2 @@
-# Docker-compose-apache-php_fpm
-Environement Docker Apache/Nginx + PHP-FPM + Mysql
+
+Run with `docker exec -i -t recycle-this_apache_1 /bin/bash`
